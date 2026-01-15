@@ -1,0 +1,76 @@
+# Step 1: Import Required Libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.datasets import fetch_california_housing
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Step 2: Load the Dataset
+data = fetch_california_housing(as_frame=True)
+df = pd.concat([data.data, data.target.rename("HousePrice")], axis=1)
+
+# Step 3: Separate Features and Target
+X = df.drop("HousePrice", axis=1)
+y = df["HousePrice"]
+
+# Step 4: Train-Test Split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Step 5: Feature Scaling
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Step 6: Train Multiple Models
+# (a) Linear Regression
+lr = LinearRegression()
+lr.fit(X_train_scaled, y_train)
+y_pred_lr = lr.predict(X_test_scaled)
+
+# (b) Ridge Regression
+ridge = Ridge(alpha=1.0)
+ridge.fit(X_train_scaled, y_train)
+y_pred_ridge = ridge.predict(X_test_scaled)
+
+# (c) Decision Tree Regressor
+dt = DecisionTreeRegressor(max_depth=10, random_state=42)
+dt.fit(X_train, y_train)  # Trees don’t need scaling
+y_pred_dt = dt.predict(X_test)
+
+# Step 7: Evaluate Models
+def evaluate_model(y_true, y_pred, model_name):
+    mse = mean_squared_error(y_true, y_pred)
+    r2 = r2_score(y_true, y_pred)
+    return {"Model": model_name, "MSE": mse, "R2": r2}
+
+results = []
+results.append(evaluate_model(y_test, y_pred_lr, "Linear Regression"))
+results.append(evaluate_model(y_test, y_pred_ridge, "Ridge Regression"))
+results.append(evaluate_model(y_test, y_pred_dt, "Decision Tree"))
+
+results_df = pd.DataFrame(results)
+print(results_df)
+
+# Step 8: Visualize Performance Comparison
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+# Bar chart for MSE
+sns.barplot(x="Model", y="MSE", data=results_df, ax=axes[0], palette="viridis")
+axes[0].set_title("Model Comparison - MSE")
+axes[0].set_ylabel("Mean Squared Error")
+
+# Bar chart for R2
+sns.barplot(x="Model", y="R2", data=results_df, ax=axes[1], palette="magma")
+axes[1].set_title("Model Comparison - R2 Score")
+axes[1].set_ylabel("R² Score")
+
+plt.tight_layout()
+plt.show()
